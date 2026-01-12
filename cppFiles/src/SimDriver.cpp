@@ -3,6 +3,7 @@
 
 SimDriver::SimDriver(Vmodule_top* top_ptr, int num_qubits) : dut(top_ptr) {
     init_qubits(num_qubits);
+    qubits->install_module(std::make_shared<BlochSphereModule>());
 }
 
 SimDriver::~SimDriver() {

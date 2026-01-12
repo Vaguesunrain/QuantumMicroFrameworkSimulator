@@ -1,44 +1,31 @@
 #include "Qubits.hpp"
 
-
 Qubits::Qubits(int num) : m_num_qubits(num) {
-    m_states.resize(num, 0);
-    std::cout << "[Qubits] Initialized system with " << num << " qubits." << std::endl;
+   
+}
+
+void Qubits::install_module(std::shared_ptr<QubitModule> mod) {
+    mod->on_init(m_num_qubits); 
+    m_modules.push_back(mod);
 }
 
 
-Qubits::~Qubits() {
-    std::cout << "[Qubits] Destroying system." << std::endl;
+void Qubits::apply_gate(std::string name, int target) {
+    std::cout << "[System] Applying " << name << " on Q" << target << std::endl;
+    for (auto& mod : m_modules) {
+        mod->on_gate(name, target);
+    }
 }
 
+void Qubits::print_status() {
+    for (auto& mod : m_modules) {
+        mod->on_print();
+    }
+}
 
 void Qubits::reset() {
-    std::fill(m_states.begin(), m_states.end(), 0);
-    std::cout << "[Qubits] All qubits reset to ground state |0>." << std::endl;
-}
-
-
-void Qubits::set_state(int index, int state) {
-    if (index >= 0 && index < m_num_qubits) {
-        m_states[index] = state;
-    } else {
-        std::cerr << "[Error] Qubit index " << index << " out of range!" << std::endl;
+    std::cout << "[System] Resetting all modules..." << std::endl;
+    for (auto& mod : m_modules) {
+        mod->reset(); 
     }
-}
-
-
-int Qubits::get_state(int index) const {
-    if (index >= 0 && index < m_num_qubits) {
-        return m_states[index];
-    }
-    return -1; // Error code
-}
-
-
-void Qubits::print_info() const {
-    std::cout << "--- Qubit System Status ---" << std::endl;
-    for (int i = 0; i < m_num_qubits; ++i) {
-        std::cout << "Q[" << i << "]: " << m_states[i] << std::endl;
-    }
-    std::cout << "---------------------------" << std::endl;
 }
