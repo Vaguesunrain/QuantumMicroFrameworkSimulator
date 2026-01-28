@@ -1,4 +1,4 @@
-# Qubit model
+## Qubit model
 
 ```mermaid
 
@@ -46,3 +46,18 @@ classDiagram
     note for BlochSphereModule "插件 A\n处理 Bloch 旋转"
     note for StateVectorModule "插件 B\n处理全态演化"
 ```
+
+
+## 时钟树
+
+1.建议分区域，qubit附近采用差分低频信号
+2.注意在差分线路加入延时
+3.使用时钟分发模块
+4.避免glitch
+5.差分信号做低摆幅评估
+
+
+## 实验
+1.慢速有时间差的时钟向qubit和gates发送流水线指令
+vs
+2.指令堆集在qubit附近，传入低平时钟，然后在PLL产高速时钟爆发执行
