@@ -2,12 +2,15 @@
 #include <complex> 
 #include <omp.h> 
 Qubits::Qubits(int num) : m_num_qubits(num), m_dim(0), m_global_state(nullptr) {
-   
 }
 
 Qubits::~Qubits() {
     delete[] m_global_state;
 }
+void Qubits::bind_sim_time(const uint64_t* time_ptr) {
+        m_external_time_ptr = time_ptr;
+}
+
 
 void Qubits:: allocate_global_state() {
     // avert double allocation

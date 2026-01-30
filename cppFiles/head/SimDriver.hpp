@@ -13,7 +13,7 @@ private:
     Vmodule_top* dut;  
     Qubits* qubits;   
     int m_last_rst_n;
-
+    uint64_t m_sim_clock = 0;
 public:
     
     SimDriver(Vmodule_top* top_ptr , int num_qubits=3 , short select_module=1);

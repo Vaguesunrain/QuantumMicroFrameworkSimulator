@@ -2,8 +2,11 @@
 #include "Vmodule_top.h" 
 #include "GateLibrary.hpp"
 GateLibrary gate_lib;
+
 SimDriver::SimDriver(Vmodule_top* top_ptr, int num_qubits, short select_module) : dut(top_ptr) {
+    
     init_qubits(num_qubits);
+    qubits->bind_sim_time(&m_sim_clock);
     if(select_module == 1) {
         auto density_module = std::make_shared<DensityMatrixModule>(gate_lib);
         qubits->install_module(density_module);
@@ -32,6 +35,7 @@ SimDriver::~SimDriver() {
 void SimDriver::step(uint64_t time) {
     rst_n();
     if(dut->trigger) {
+        m_sim_clock = time;
         std::cout << "[SimDriver] Time " << time << ": Trigger received. Performing operations..." << std::endl;
        // Example: Apply a Hadamard gate to qubit 0 on trigger
         qubits->apply_gate("H", 0);

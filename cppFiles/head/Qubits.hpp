@@ -28,7 +28,7 @@ public:
 class Qubits {
 private:
     int m_num_qubits;
-
+    const uint64_t* m_external_time_ptr = nullptr;
     size_t m_dim;
     // 【新增】由 Qubits 类持有唯一的 1TB 数据的所有权
     std::complex<double>* m_global_state = nullptr; 
@@ -40,6 +40,7 @@ public:
     
     Qubits(int num);
     ~Qubits();
+    void bind_sim_time(const uint64_t* time_ptr);
     void install_module(std::shared_ptr<QubitModule> mod);
     void apply_gate(std::string name, int target); 
     void apply_multi_gate(std::string name, const std::vector<int>& targets);
