@@ -33,20 +33,46 @@ SimDriver::~SimDriver() {
 }
 
 void SimDriver::step(uint64_t time) {
-    rst_n();
-    if(dut->trigger) {
+
+    if (dut->rst_n == 0) {
+        if (m_last_rst_n == 1) {
+            std::cout << "[SimDriver] Time " << time << ": SV Hardware Reset Detected. Resetting Qubit States..." << std::endl;
+            qubits->reset();
+        }
+        m_last_rst_n = dut->rst_n; 
+        return;                    
+    }
+    if (dut->rst_n == 1 && m_last_rst_n == 0) {
+        std::cout << "[SimDriver] Time " << time << ": SV Hardware Reset Released. Recovery cycle..." << std::endl;
+        m_last_rst_n = dut->rst_n; 
+        return;                    
+    }
+    m_last_rst_n = dut->rst_n; 
+
+    if (dut->trigger) {
         m_sim_clock = time;
-        std::cout << "[SimDriver] Time " << time << ": Trigger received. Performing operations..." << std::endl;
-       // Example: Apply a Hadamard gate to qubit 0 on trigger
-        qubits->apply_gate("H", 0);
-        qubits->print_full_matrix();
-        qubits->apply_multi_gate("CNOT", {0,1});
-        qubits->print_full_matrix();
-        qubits->apply_multi_gate("SWAP", {0,1});
-        qubits->print_status();
-        qubits->print_full_matrix();
-   }
+        
+        uint32_t raw_cmd = dut->control_bus;
+        
+        uint8_t  opcode  = (raw_cmd >> 24) & 0xFF;
+        uint16_t src_qid = (raw_cmd >> 12) & 0xFFF;
+        uint16_t dst_qid = raw_cmd & 0xFFF;
+        switch(opcode){
+            case 0x01:
+                qubits->apply_gate("H", src_qid);
+                break;
+            case 0x02:
+                qubits->apply_gate("X", src_qid);
+                break;
+            case 0x10:
+                qubits->apply_multi_gate("CNOT", {src_qid,dst_qid});
+                break;
+            default:
+                break;
+        }
+    }
 }
+
 
 void SimDriver::init_qubits(int num_qubits) {
     qubits = new Qubits(num_qubits);

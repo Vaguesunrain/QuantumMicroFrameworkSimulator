@@ -10,34 +10,39 @@ int main(int argc, char** argv) {
     Verilated::traceEverOn(true);
     VerilatedVcdC* tfp = new VerilatedVcdC;
 
-    SimDriver* driver = new SimDriver(top);
+    SimDriver* driver = new SimDriver(top,4,1);
     top->trace(tfp, 99);
     tfp->open("wave.vcd"); 
 
-    int main_time = 0;
-    while (main_time < 70) { // 稍微跑长一点
-        top->clk = main_time; 
-        driver->step(main_time);
-        if (main_time < 4) top->rst_n = 0; else top->rst_n = 1;
+    uint64_t main_time = 0; 
 
-        if (main_time == 10) { 
-       
-        } else if (main_time > 10) {
-        }
-
-        top->eval();
-        tfp->dump(main_time); // 将当前时刻的数据存入波形
-        if(top->trigger) {
-            printf("Time: %d | Triggered!\n", main_time);
-        }
-     
-        main_time++;
+    std::cout << "[Testbench] Asserting hardware reset..." << std::endl;
+    for (int rst_cycle = 0; rst_cycle < 2; rst_cycle++) {
+        top->rst_n = 0; 
+        
+        top->clk = 0; top->eval(); tfp->dump(main_time++); 
+        top->clk = 1; top->eval(); tfp->dump(main_time++); 
     }
-    tfp->close();
 
+    std::cout << "[Testbench] Releasing reset, running main simulation pipeline..." << std::endl;
+    top->rst_n = 1; 
+
+    while (main_time < 400) { 
+        
+        top->clk = 0;
+        top->eval();
+        tfp->dump(main_time++); 
+
+        top->clk = 1;
+        top->eval(); 
+        
+        driver->step(main_time); 
+        tfp->dump(main_time++); 
+    }
+
+    tfp->close();
     delete driver;
     delete top;
- 
 
     return 0;
 }
