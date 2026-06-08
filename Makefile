@@ -10,11 +10,12 @@ EIGEN3_INC_DIR = /usr/include/eigen3
 # 源文件列表
 TB_CPPS = sim_main.cpp $(shell find $(SRC_DIR) -name "*.cpp")# traverse all cpp files in src
 SV_FILES = -f files.f
+CFLAGS = -O3 -fopenmp -I$(INC_DIR) -I$(EIGEN3_INC_DIR) 
 
-# --- 修改点：这里会自动展开为绝对路径 ---
-CFLAGS = -I$(INC_DIR) -I$(EIGEN3_INC_DIR) 
+LDFLAGS = -fopenmp
+
 V_FLAGS = -Wall --trace --cc --exe
-V_FLAGS += -CFLAGS "$(CFLAGS)"
+V_FLAGS += -CFLAGS "$(CFLAGS)" -LDFLAGS "$(LDFLAGS)"
 
 EXE = $(OBJ_DIR)/V$(MODULE)
 
