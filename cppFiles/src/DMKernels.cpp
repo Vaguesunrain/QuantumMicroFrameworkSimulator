@@ -1,6 +1,8 @@
 #include "QubitModule/DMKernels.hpp"
 #include <omp.h>
-
+#include <random>    
+#include <algorithm> 
+#include <cmath>    
 namespace {
 
     static inline size_t insert_bit(size_t val, int pos) {
@@ -214,6 +216,93 @@ namespace DMKernels {
         }
     }
 
+
+
+
+    int measure_single_qubit(std::complex<double>* rho, size_t dim, int target) {
+        if (!rho) return -1;
+
+        size_t target_mask = 1ULL << target;
+        double p0 = 0.0;
+
+        // 1. 高并发计算 p0 (只遍历符合条件的对角线元素，循环次数减半)
+        #pragma omp parallel for reduction(+:p0) schedule(static)
+        for (size_t idx = 0; idx < dim / 2; ++idx) {
+            size_t i = insert_bit(idx, target); //  target  0
+            // 行优先存储下，对角线元素 (i, i) 的一维偏移量为 i * dim + i
+            p0 += std::max(0.0, rho[i * dim + i].real());
+        }
+
+        // 2. 随机采样
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+
+        int outcome = (dis(gen) < p0) ? 0 : 1;
+        double p_outcome = (outcome == 0) ? p0 : (1.0 - p0);
+
+        // 3. 状态坍缩 (并行行扫描)
+        if (p_outcome > 1e-15) {
+            double scale = 1.0 / p_outcome;
+
+            if (outcome == 0) {
+                #pragma omp parallel for schedule(static)
+                for (size_t r = 0; r < dim; ++r) {
+                    bool r_bit = (r & target_mask) != 0;
+                    std::complex<double>* row_ptr = rho + r * dim;
+
+                    if (r_bit) {
+                        // 行索引不符：整行瞬间归零 (高度优化，触发 std::fill_n 的向量化写入)
+                        std::fill_n(row_ptr, dim, std::complex<double>(0.0, 0.0));
+                    } else {
+                        // 行索引相符：处理列
+                        for (size_t c_idx = 0; c_idx < dim / 2; ++c_idx) {
+                            size_t c0 = insert_bit(c_idx, target);
+                            size_t c1 = c0 | target_mask;
+                            row_ptr[c0] *= scale; // 保留项归一化
+                            row_ptr[c1] = 0.0;    // 冲突项归零
+                        }
+                    }
+                }
+            } 
+            else { // outcome == 1
+                #pragma omp parallel for schedule(static)
+                for (size_t r = 0; r < dim; ++r) {
+                    bool r_bit = (r & target_mask) != 0;
+                    std::complex<double>* row_ptr = rho + r * dim;
+
+                    if (!r_bit) {
+                        // 行索引不符：整行归零
+                        std::fill_n(row_ptr, dim, std::complex<double>(0.0, 0.0));
+                    } else {
+                        // 行索引相符：处理列
+                        for (size_t c_idx = 0; c_idx < dim / 2; ++c_idx) {
+                            size_t c0 = insert_bit(c_idx, target);
+                            size_t c1 = c0 | target_mask;
+                            row_ptr[c0] = 0.0;    // 冲突项归零
+                            row_ptr[c1] *= scale; // 保留项归一化
+                        }
+                    }
+                }
+            }
+        } 
+        else {
+            // 极低概率边界处理：若出现除零风险，强行将矩阵重置为目标结果的纯态
+            #pragma omp parallel for schedule(static)
+            for (size_t r = 0; r < dim; ++r) {
+                std::fill_n(rho + r * dim, dim, std::complex<double>(0.0, 0.0));
+            }
+            // 寻找第一个符合测量结果的基态，将其概率设为 1.0
+            for (size_t i = 0; i < dim; ++i) {
+                if (((i & target_mask) != 0) == (outcome == 1)) {
+                    rho[i * dim + i] = 1.0;
+                    break;
+                }
+            }
+        }
+
+        return outcome;
+    }
 /*
 ToDo:
 还可以压榨的性能点：

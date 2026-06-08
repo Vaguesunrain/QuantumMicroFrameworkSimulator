@@ -31,6 +31,11 @@ public:
 
     void on_gate(const std::string& gate_name, int target) override {
         if (!m_rho) return;
+        if (gate_name == "Measurement") {
+            int outcome = DMKernels::measure_single_qubit(m_rho, m_dim, target);
+            std::cout << "[Measurement] Qubit " << target << " -> " << outcome << std::endl;
+            return; 
+        }
         const Gate& gate = m_gate_lib.get(gate_name);
         Eigen::Matrix2cd fixed_mat = gate.matrix;
         DMKernels::apply_single_qubit_gate(m_rho, m_dim, target, fixed_mat);

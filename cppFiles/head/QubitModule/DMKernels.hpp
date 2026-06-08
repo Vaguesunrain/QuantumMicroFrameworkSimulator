@@ -18,6 +18,7 @@ namespace DMKernels {
 
     void apply_single_qubit_gate(std::complex<double>* rho, size_t dim, 
                                  int target, const Eigen::Matrix2cd& U);
+    int measure_single_qubit(std::complex<double>* rho, size_t dim, int target);
 }
 
 #endif
